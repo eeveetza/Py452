@@ -46,7 +46,6 @@ The function `P452.bt_loss` can be called
 | `htg`           | scalar double    | m      |           |  Tx antenna height above ground level |
 | `hrg`           | scalar double    | m      |          |  Rx antenna height above ground level |
 | `phi_path`           | scalar double    | deg      |   -90 ≤ `phi_t`  ≤ 90          |  Latitude of path center between Tx and Rx stations |
-| `phi_r`           | scalar double    | deg      |   -90 ≤ `phi_r`  ≤ 90          |  Latitude of Rx station |
 | `Gt`  `Gr`           | scalar double  |   dBi    |           |  Tx/Rx antenna gain in the direction of the horizon towards along the great-circle interference path. |
 | `pol`           | scalar int    |       |   `pol`  = 1, 2          |  Polarization of the signal: 1 - horizontal, 2 - vertical |
 | `dct`           | scalar double    | km      |   `dct` ≥ 0          |  Distance over land from the Tx antenna to the coast along the great-circle interference path. To be set to zero for a terminal on a ship or sea platform.|
