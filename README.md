@@ -2,11 +2,11 @@
 
 This code repository contains a python software implementation of  [Recommendation ITU-R P.452-17](https://www.itu.int/rec/R-REC-P.452/en)  with a prediction procedure for the evaluation of interference between stations on the surface of the Earth at frequencies above about 0.1 GHz.  
 
-This is a translation of the original reference [MATLAB/Octave Implementation of Recommendation ITU-R P.452](https://github/eeveetza/p452) approved by ITU-R Working Party 3M and published by Study Group 3 on [ITU-R SG 3 Software, Data, and Validation Web Page](https://www.itu.int/en/ITU-R/study-groups/rsg3/Pages/iono-tropo-spheric.aspx).
+This is a development code and it is not necessarily in line with the original reference [MATLAB/Octave Implementation of Recommendation ITU-R P.452](https://github/eeveetza/p452) approved by ITU-R Working Party 3M and published on [ITU-R SG 3 Software, Data, and Validation Web Page](https://www.itu.int/en/ITU-R/study-groups/rsg3/Pages/iono-tropo-spheric.aspx).
 
 The package can be downloaded and installed using:
 ~~~
-python -m pip install "git+https://github.com/eeveetza/Py452/#egg=Py452"   
+python -m pip install "git+https://github.com/eeveetza/Py452@dev#egg=Py452"   
 ~~~
 
 and imported as follows
