@@ -9,7 +9,7 @@
   Date            Revision
   30Mar2022       Initial version (IS)  
   09NOV2023       Revised using Pandas (IS, following validatePy2001.py (Adrien Demarez))
-  
+  16NOV2023       Aligned with ITU-R P.452-18
 """
 
 import os
@@ -39,48 +39,87 @@ for filename in filenames:
     
     # read the path profiles, input arguments and reference values
     
-    df1 = pd.read_csv(test_profiles + filename, skiprows=1, names=['d', 'h', 'zonestr', 'zone'])
+    df1 = pd.read_csv(test_profiles + filename, skiprows=1, names=['d', 'h', 'r', 'zonestr', 'zone'])
     df2 = pd.read_csv(test_results + filename.replace("test_profile", "test_result"), skiprows = 1, 
-                    names = ['profile', 'f', 'p', 'htg', 'hrg', 'phi_path', 'Gt', 'Gr', 'pol', 'dct', 'dcr', 
-                            'DN', 'N0', 'press', 'temp', 'ha_t', 'ha_r', 'dk_t', 'dk_r', 'ae', 'dtot', 	
+                    names = ['profile', 'f', 'p', 'htg', 'hrg', 'phit_e', 'phit_n', 'phir_e', 'phir_n', 'Gt', 'Gr', 'pol', 'dct', 'dcr', 
+                            'press', 'temp', 'ae', 'dtot', 	
                             'hts', 'hrs', 'theta_t', 'theta_r', 'theta', 'hm', 'hte', 'hre', 'hstd', 'hsrd',
-                            'dlt', 'dlr', 'path', 'dtm', 'dlm', 'b0', 'omega', 'Lb', 'Lbfsg', 'Lb0p', 'Lb0b', 'Ldsph', 'Ld50', 'Ldp', 'Lbs', 'Lba'])
+                            'dlt', 'dlr', 'path', 'dtm', 'dlm', 'b0', 'omega', 'DN', 'N0', 'Lb', 'Lbfsg', 'Lb0p', 'Lb0b', 'Ldsph', 'Ld50', 'Ldp', 'Lbs', 'Lba'])
+    
+    d = df1.d.to_numpy()
+    h = df1.h.to_numpy()
+    r = df1.r.to_numpy()
+    zone =  df1.zone.to_numpy()
+    
+    g = h + r
+    
+        # Ensure that vector d is ascending
+    if not np.all(np.diff(d) >= 0):
+        raise ValueError("The array of path profile points d[i] must be in ascending order.")
+
+    # Ensure that d[0] = 0 (Tx position)
+    if d[0] > 0.0:
+        raise ValueError("The first path profile point d[0] = " + str(d[0]) + " must be zero.")
+
+    dtot = d[-1]
+
+    # Apply the condition in Step 4: Radio profile 
+    # gi is the terrain height in metres above sea level for all the points at a distance from transmitter or receiver less than 50 m.
+
+    (kk, ) = np.where(d < 50/1000)
+    if (~P452.isempty(kk)):
+        g[kk] = h[kk]
+    
+    (kk,  ) = np.where(dtot - d < 50/1000)
+    if (~P452.isempty(kk)):
+        g[kk] = h[kk]
     
     print("Processing file " + filename + "\n")
     
     failed = False
     
-    (nrows, ) = df1.d.to_numpy().shape
+    (nrows, ) = d.shape
     
     # sort the reference values in an array
     row = df2.iloc[0]
     
-    dc, hc, zonec, htgc, hrgc, Aht, Ahr = P452.closs_corr(row.f, df1.d.to_numpy(), df1.h.to_numpy(), df1.zone.to_numpy(), row.htg, row.hrg, row.ha_t, row.ha_r, row.dk_t, row.dk_r)
-
     # Compute  dtm     -   the longest continuous land (inland + coastal) section of the great-circle path (km)
     zone_r = 12
-    dtm = P452.longest_cont_dist(df1.d.to_numpy(), df1.zone.to_numpy(), zone_r)
+    dtm = P452.longest_cont_dist(d, zone, zone_r)
 
     # Compute  dlm     -   the longest continuous inland section of the great-circle path (km)
     zone_r = 2
-    dlm = P452.longest_cont_dist(df1.d.to_numpy(), df1.zone.to_numpy(), zone_r)
+    dlm = P452.longest_cont_dist(d, zone, zone_r)
 
+# Calculate the longitude and latitude of the mid-point of the path, phim_e,
+    # and phim_n for dpnt = 0.5dt
+    Re = 6371
+    dpnt = 0.5 * dtot
+    phim_e, phim_n, _, _ = P452.great_circle_path(row.phir_e, row.phit_e, row.phir_n, row.phit_n, Re, dpnt)
+
+
+    # Find radio-refractivity lapse rate dN 
+    # using the digital maps at phim_e (lon), phim_n (lat) - as a bilinear interpolation
+    DN50 = P452.DigitalMaps["DN50"]
+    N050 = P452.DigitalMaps["N050"]
+    
+    DN = P452.interp2(DN50, phim_e, phim_n, 1.5, 1.5)
+    N0 = P452.interp2(N050, phim_e, phim_n, 1.5, 1.5)
+    
     # Compute b0
-    b0 = P452.beta0(row.phi_path, dtm, dlm)
+    b0 = P452.beta0(phim_n, dtm, dlm)
 
-    ae, ab = P452.earth_rad_eff(row.DN)
+    ae, ab = P452.earth_rad_eff(DN)
 
-    hst, hsr, hstd, hsrd, hte, hre, hm, dlt, dlr, theta_t, theta_r, theta, pathtype = P452.smooth_earth_heights(dc, hc, htgc, hrgc, ae, row.f)
-
-    dtot = dc[-1] - dc[0]
+    hst, hsr, hstd, hsrd, hte, hre, hm, dlt, dlr, theta_t, theta_r, theta, pathtype = P452.smooth_earth_heights(d, h, row.htg, row.hrg, ae, row.f)
 
     # Tx and Rx antenna heights above mean sea level amsl (m)
-    hts = hc[0] + htgc
-    hrs = hc[-1] + hrgc
+    hts = h[0] + row.htg
+    hrs = h[-1] + row.hrg
 
     # Compute the path fraction over see
 
-    omega = P452.path_fraction(df1.d.to_numpy(), df1.zone.to_numpy(), 3)
+    omega = P452.path_fraction(d, zone, 3)
 
     # verify the results struct `out` against the reference struct `ppref`
     out = np.zeros(19)
@@ -190,23 +229,23 @@ for filename in filenames:
         d3D = np.sqrt(dtot**2.0 + (hts - hrs) ** 2 / 1e6)
         Lbfsg[i], Lb0p[i], Lb0b[i] = P452.pl_los(d3D, row.f, row.p, b0, omega, row.temp, row.press, dlt, dlr)
 
-        Lbs[i] = P452.tl_tropo(dtot, theta, row.f, row.p, row.temp, row.press, row.N0, row.Gt, row.Gr)
+        Lbs[i] = P452.tl_tropo(dtot, theta, row.f, row.p, row.temp, row.press, N0, row.Gt, row.Gr)
 
         Lba[i] = P452.tl_anomalous(dtot, dlt, dlr, row.dct, row.dcr, dlm, hts, hrs, hte, hre, hm, theta_t, theta_r, row.f, row.p, row.temp, row.press, omega, ae, b0)
 
-        Lbulla[i] = P452.dl_bull(dc, hc, hts, hrs, ae, row.f)
+        Lbulla[i] = P452.dl_bull(d, g, hts, hrs, ae, row.f)
 
         # Use the method in 4.2.1 for a second time, with all profile heights hi
         # set to zero and modified antenna heights given by
 
         hts1 = hts - hstd  # eq (38a)
         hrs1 = hrs - hsrd  # eq (38b)
-        h1 = np.zeros(hc.shape)
+        h1 = np.zeros(h.shape)
 
         # where hstd and hsrd are given in 5.1.6.3 of Attachment 2. Set the
         # resulting Bullington diffraction loss for this smooth path to Lbulls
 
-        Lbulls[i] = P452.dl_bull(dc, h1, hts1, hrs1, ae, row.f)
+        Lbulls[i] = P452.dl_bull(d, h1, hts1, hrs1, ae, row.f)
 
         # Use the method in 4.2.2 to radiomaps the spherical-Earth diffraction loss
         # for the actual path length (dtot) with
@@ -221,12 +260,12 @@ for filename in filenames:
         
         Ld[i] = Lbulla[i] + max(Ldsph[i] - Lbulls[i], 0)  # eq (40)
 
-        Ldp_pol, Ld50_pol = P452.dl_p(dc, hc, hts, hrs, hstd, hsrd, row.f, omega, row.p, b0, row.DN)
+        Ldp_pol, Ld50_pol = P452.dl_p(d, g, hts, hrs, hstd, hsrd, row.f, omega, row.p, b0, DN)
 
         Ldp[i] = Ldp_pol[int(row.pol - 1)]
         Ld50[i] = Ld50_pol[int(row.pol - 1)]
 
-        Lb[i] = P452.bt_loss(row.f, row.p, df1.d.to_numpy(), df1.h.to_numpy(), df1.zone.to_numpy(), row.htg, row.hrg, row.phi_path, row.Gt, row.Gr, row.pol, row.dct, row.dcr, row.DN, row.N0, row.press, row.temp, row.ha_t, row.ha_r, row.dk_t, row.dk_r)
+        Lb[i] = P452.bt_loss(row.f, row.p, d, h, g, zone, row.htg, row.hrg, row.phit_e, row.phit_n, row.phir_e, row.phir_n, row.Gt, row.Gr, row.pol, row.dct, row.dcr,  row.press, row.temp)
 
         out1[0, i] = Lbfsg[i] - Lbfsg_ref[i]
         out1str[0] = "Lbfsg"
