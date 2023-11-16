@@ -7,14 +7,18 @@ Created on Thu 17 Mar 2022
 """
 
 import warnings
-
 import numpy as np
+from importlib.resources import files
 
+DigitalMaps = {}
+with np.load(files("Py452").joinpath("P452.npz")) as DigitalMapsNpz:
+    for k in DigitalMapsNpz.files:
+        DigitalMaps[k] = DigitalMapsNpz[k].copy()
 
-def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0, press, temp, *args):
+def bt_loss(f, p, d, h, g, zone, htg, hrg, phit_e, phit_n, phir_e, phir_n, Gt, Gr, pol, dct, dcr, press, temp):
     """
-    P452.bt_loss basic transmission loss according to P.452-17
-    Lb = P452.bt_loss(f, p, d, h, zone, htg, hrg, phi_t, phi_r, Gt, Gr, pol, dct, dcr, DN, N0, press, temp, ha_t, ha_r, dk_t, dk_r )
+    P452.bt_loss basic transmission loss according to Rec ITU-R P.452-18
+    Lb = P452.bt_loss(f, p, d, h, g, zone, htg, hrg, phit_e, phit_n, phir_e, phir_n, Gt, Gr, pol, dct, dcr, press, temp)
 
     This is the MAIN function that computes the basic transmission loss not exceeded for p percentage of time
     as defined in ITU-R P.452-17 (Section 4.6).
@@ -29,38 +33,27 @@ def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0,
     zone    -   Zone type: Coastal land (1), Inland (2) or Sea (3)
     htg     -   Tx Antenna center heigth above ground level (m)
     hrg     -   Rx Antenna center heigth above ground level (m)
-    phi_path-   Latitude of path centre between Tx and Rx stations (degrees)
+    phit_e  -   Tx Longitude (degrees)
+    phit_n  -   Tx Latitude  (degrees)
+    phir_e  -   Rx Longitude (degrees)
+    phir_n  -   Rx Latitude  (degrees)
     Gt, Gr  -   Antenna gain in the direction of the horizon along the
                 great-circle interference path (dBi)
     pol     -   polarization of the signal (1) horizontal, (2) vertical
     dct     -   Distance over land from the transmit and receive
     dcr         antennas to the coast along the great-circle interference path (km).
                 Set to zero for a terminal on a ship or sea platform
-    DN      -   The average radio-refractive index lapse-rate through the
-                lowest 1 km of the atmosphere (it is a positive quantity in this
-                procedure) (N-units/km)
-    N0      -   The sea-level surface refractivity, is used only by the
-                troposcatter model as a measure of location variability of the
-                troposcatter mechanism. The correct values of DN and N0 are given by
-                the path-centre values as derived from the appropriate
-                maps (N-units)
     press   -   Dry air pressure (hPa)
     temp    -   Air temperature (degrees C)
-    ha_t    -   Clutter nominal height (m) at the Tx side
-    ha_r    -   Clutter nominal height (m) at the Rx side
-    dk_t    -   Clutter nominal distance (km) at the Tx side
-    dk_r    -   Clutter nominal distance (km) at the Rx side
 
     Output parameters:
-    Lb     -   basic  transmission loss according to P.452-17
+    Lb     -   basic  transmission loss according to P.452-18
 
-    Example:
-    Lb = P452.bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0, press, temp)
-    Lb = P452.bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0, press, temp, ha_t, ha_r, dk_t, dk_r)
 
     Rev   Date        Author                          Description
     -------------------------------------------------------------------------------
     v0    17MAR22     Ivica Stevanovic, OFCOM         Initial version
+    v1    16NOV23     Ivica Stevanovic, OFCOM         Aligned with ITU-R P.452-18
 
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -75,30 +68,6 @@ def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0,
 
     """
 
-    # Read the input arguments
-
-    if len(args) > 4:
-        print("P452.bt_loss: Too many input arguments; The function requires at most 22")
-        print("input arguments. Additional values ignored. Input values may be wrongly assigned.")
-
-    # Optional arguments
-
-    ha_t = []
-    ha_r = []
-    dk_t = []
-    dk_r = []
-
-    icount = 18
-    nargin = icount + len(args)
-    if nargin >= icount + 1:
-        ha_t = args[0]
-        if nargin >= icount + 2:
-            ha_r = args[1]
-            if nargin >= icount + 3:
-                dk_t = args[2]
-                if nargin >= icount + 4:
-                    dk_r = args[3]
-
     # Ensure that vector d is ascending
     if not np.all(np.diff(d) >= 0):
         raise ValueError("The array of path profile points d[i] must be in ascending order.")
@@ -106,6 +75,19 @@ def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0,
     # Ensure that d[0] = 0 (Tx position)
     if d[0] > 0.0:
         raise ValueError("The first path profile point d[0] = " + str(d[0]) + " must be zero.")
+
+    dtot = d[-1]
+
+    # Apply the condition in Step 4: Radio profile 
+    # gi is the terrain height in metres above sea level for all the points at a distance from transmitter or receiver less than 50 m.
+
+    (kk, ) = np.where(d < 50/1000)
+    if (~isempty(kk)):
+        g[kk] = h[kk]
+    
+    (kk,  ) = np.where(dtot - d < 50/1000)
+    if (~isempty(kk)):
+        g[kk] = h[kk]
 
     # Compute the path profile parameters
 
@@ -116,9 +98,24 @@ def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0,
     # Compute  dlm     -   the longest continuous inland section of the great-circle path (km)
     zone_r = 2
     dlm = longest_cont_dist(d, zone, zone_r)
+    
+    # Calculate the longitude and latitude of the mid-point of the path, phim_e,
+    # and phim_n for dpnt = 0.5dt
+    Re = 6371
+    dpnt = 0.5 * dtot
+    phim_e, phim_n, _, _ = great_circle_path(phir_e, phit_e, phir_n, phit_n, Re, dpnt)
 
+
+    # Find radio-refractivity lapse rate dN 
+    # using the digital maps at phim_e (lon), phim_n (lat) - as a bilinear interpolation
+    DN50 = DigitalMaps["DN50"]
+    N050 = DigitalMaps["N050"]
+    
+    DN = interp2(DN50, phim_e, phim_n, 1.5, 1.5)
+    N0 = interp2(N050, phim_e, phim_n, 1.5, 1.5)
+    
     # Compute b0
-    b0 = beta0(phi_path, dtm, dlm)
+    b0 = beta0(phim_n, dtm, dlm)
 
     ae, ab = earth_rad_eff(DN)
 
@@ -126,24 +123,11 @@ def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0,
 
     omega = path_fraction(d, zone, 3)
 
-    # Modify the path according to Section 4.5.4, Step 1 and compute clutter losses
-    # only if not isempty ha_t and ha_r
-
-    dc, hc, zonec, htgc, hrgc, Aht, Ahr = closs_corr(f, d, h, zone, htg, hrg, ha_t, ha_r, dk_t, dk_r)
-
-    d = dc
-    h = hc
-    zone = zonec
-    htg = htgc
-    hrg = hrgc
-
     hst, hsr, hstd, hsrd, hte, hre, hm, dlt, dlr, theta_t, theta_r, theta, pathtype = smooth_earth_heights(d, h, htg, hrg, ae, f)
 
-    dtot = d[-1] - d[0]
-
     # Tx and Rx antenna heights above mean sea level amsl (m)
-    hts = h[0] + htgc
-    hrs = h[-1] + hrgc
+    hts = h[0] + htg
+    hrs = h[-1] + hrg
 
     # Effective Earth curvature Ce (km^-1)
 
@@ -158,7 +142,7 @@ def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0,
     di = d[1:-1]
     hi = h[1:-1]
 
-    Stim = max((hi + 500 * Ce * di * (dtot - di) - hts) / di)  # Eq (14)
+    Stim = max((hi + 500 * Ce * di * (dtot - di) - hts) / di)  # Use hi instead of gi in Eq (14)
 
     # Calculate the slope of the line from transmitter to receiver assuming a
     # LoS path
@@ -185,7 +169,7 @@ def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0,
 
     Lbfsg, Lb0p, Lb0b = pl_los(d3D, f, p, b0, omega, temp, press, dlt, dlr)
 
-    Ldp, Ld50 = dl_p(d, h, hts, hrs, hstd, hsrd, f, omega, p, b0, DN)
+    Ldp, Ld50 = dl_p(d, g, hts, hrs, hstd, hsrd, f, omega, p, b0, DN)
 
     # The median basic transmission loss associated with diffraction Eq (43)
 
@@ -238,7 +222,7 @@ def bt_loss(f, p, d, h, zone, htg, hrg, phi_path, Gt, Gr, pol, dct, dcr, DN, N0,
 
     # Calculate the final transmission loss not exceeded for p% time
 
-    Lb_pol = -5 * np.log10(10 ** (-0.2 * Lbs) + 10 ** (-0.2 * Lbam)) + Aht + Ahr  # eq (64)
+    Lb_pol = -5 * np.log10(10 ** (-0.2 * Lbs) + 10 ** (-0.2 * Lbam))   # eq (64)
 
     Lb = Lb_pol[int(pol - 1)]
 
@@ -1807,3 +1791,32 @@ def isempty(x):
         return True
     else:
         return False
+
+def interp2(matrix_map, lon, lat, lon_spacing, lat_spacing):
+    """
+    Bi-linear interpolation of data contained in 2D matrix map at point (lon,lat)
+    It assumes that the grid is rectangular with spacing of 1.5 deg in both lon and lat
+    It assumes that lon goes from 0 to 360 deg and lat goes from 90 to -90 deg
+    """
+
+    latitudeOffset = 90.0 - lat
+    longitudeOffset = lon
+
+    sizeY, sizeX = matrix_map.shape
+
+    latitudeIndex = int(latitudeOffset / lat_spacing)
+    longitudeIndex = int(longitudeOffset / lon_spacing)
+
+    latitudeFraction = (latitudeOffset / lat_spacing) - latitudeIndex
+    longitudeFraction = (longitudeOffset / lon_spacing) - longitudeIndex
+
+    value_ul = matrix_map[latitudeIndex][longitudeIndex]
+    value_ur = matrix_map[latitudeIndex][(longitudeIndex + 1) % sizeX]
+    value_ll = matrix_map[(latitudeIndex + 1) % sizeY][longitudeIndex]
+    value_lr = matrix_map[(latitudeIndex + 1) % sizeY][(longitudeIndex + 1) % sizeX]
+
+    interpolatedHeight1 = (longitudeFraction * (value_ur - value_ul)) + value_ul
+    interpolatedHeight2 = (longitudeFraction * (value_lr - value_ll)) + value_ll
+    interpolatedHeight3 = latitudeFraction * (interpolatedHeight2 - interpolatedHeight1) + interpolatedHeight1
+
+    return interpolatedHeight3
