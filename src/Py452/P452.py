@@ -1799,9 +1799,14 @@ def interp2(matrix_map, lon, lat, lon_spacing, lat_spacing):
     It assumes that lon goes from 0 to 360 deg and lat goes from 90 to -90 deg
     """
 
+    
     latitudeOffset = 90.0 - lat
     longitudeOffset = lon
+    
+    if (lon < 0.0):
+        longitudeOffset = lon + 360.0
 
+    
     sizeY, sizeX = matrix_map.shape
 
     latitudeIndex = int(latitudeOffset / lat_spacing)

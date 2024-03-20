@@ -122,9 +122,9 @@ for filename in filenames:
     omega = P452.path_fraction(d, zone, 3)
 
     # verify the results struct `out` against the reference struct `ppref`
-    out = np.zeros(19)
-    pref = np.zeros(19)
-    outstr = np.empty(19, dtype=object)
+    out = np.zeros(21)
+    pref = np.zeros(21)
+    outstr = np.empty(21, dtype=object)
     
 
     pref[0] = row.ae
@@ -146,6 +146,8 @@ for filename in filenames:
     pref[16] = row.dlm
     pref[17] = row.b0
     pref[18] = row.omega
+    pref[19] = row.DN  
+    pref[20] = row.N0  
     
     out[0] = ae
     out[1] = dtot
@@ -166,6 +168,8 @@ for filename in filenames:
     out[16] = dlm
     out[17] = b0
     out[18] = omega
+    out[19] = DN
+    out[20] = N0
 
     outstr[0] = "ae"
     outstr[1] = "dtot"
@@ -186,6 +190,8 @@ for filename in filenames:
     outstr[16] = "dlm"
     outstr[17] = "b0"
     outstr[18] = "omega"
+    outstr[19] = "DN"
+    outstr[20] = "N0"
 
     # verify the results `out` against the reference `pref`
 
