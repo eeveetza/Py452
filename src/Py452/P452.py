@@ -54,6 +54,7 @@ def bt_loss(f, p, d, h, g, zone, htg, hrg, phit_e, phit_n, phir_e, phir_n, Gt, G
     -------------------------------------------------------------------------------
     v0    17MAR22     Ivica Stevanovic, OFCOM         Initial version
     v1    16NOV23     Ivica Stevanovic, OFCOM         Aligned with ITU-R P.452-18
+    v2    21MAY24     Ivica Stevanovic, OFCOM         Corrected the 50 m condition at the receiver side of the path
 
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -84,8 +85,9 @@ def bt_loss(f, p, d, h, g, zone, htg, hrg, phit_e, phit_n, phir_e, phir_n, Gt, G
     (kk, ) = np.where(d < 50/1000)
     if (~isempty(kk)):
         g[kk] = h[kk]
-    
-    (kk,  ) = np.where(dtot - d < 50/1000)
+        
+    endVal = d[-1] - 50.0/1000.0;
+    (kk,  ) = np.where(d > endVal)
     if (~isempty(kk)):
         g[kk] = h[kk]
 

@@ -66,11 +66,12 @@ for filename in filenames:
     # Apply the condition in Step 4: Radio profile 
     # gi is the terrain height in metres above sea level for all the points at a distance from transmitter or receiver less than 50 m.
 
-    (kk, ) = np.where(d < 50/1000)
+    (kk, ) = np.where(d < 50.0/1000.0)
     if (~P452.isempty(kk)):
         g[kk] = h[kk]
     
-    (kk,  ) = np.where(dtot - d < 50/1000)
+    endVal = d[-1] - 50.0/1000.0;
+    (kk,  ) = np.where(d > endVal)
     if (~P452.isempty(kk)):
         g[kk] = h[kk]
     
