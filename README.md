@@ -1,12 +1,14 @@
 # Python Implementation of Recommendation ITU-R P.452
 
-This is development code!
+<!--This is development code!-->
 
-This code repository contains a python software implementation of  [Recommendation ITU-R P.452-18](https://www.itu.int/rec/R-REC-P.452/en)  with a prediction procedure for the evaluation of interference between stations on the surface of the Earth at frequencies above about 100 MHz.  
+This code repository contains a python software implementation of [Recommendation ITU-R P.452-18](https://www.itu.int/rec/R-REC-P.452/en) with a prediction procedure for the evaluation of interference between stations on the surface of the Earth at frequencies above about 100 MHz.  
 
-This development version implements the clutter loss model along the path profile.
+<!--This development version implements the clutter loss model along the path profile.
 
 This is a development code and it is not necessarily in line with the original reference [MATLAB/Octave Implementation of Recommendation ITU-R P.452](https://github/eeveetza/p452) approved by ITU-R Working Party 3M and published on [ITU-R SG 3 Software, Data, and Validation Web Page](https://www.itu.int/en/ITU-R/study-groups/rsg3/Pages/iono-tropo-spheric.aspx).
+-->
+This code is functionally identical with the original reference [MATLAB/Octave Implementation of Recommendation ITU-R P.452](https://github/eeveetza/p452) approved by ITU-R Working Party 3M and published on [ITU-R SG 3 Software, Data, and Validation Web Page](https://www.itu.int/en/ITU-R/study-groups/rsg3/Pages/iono-tropo-spheric.aspx).
 
 The package can be downloaded and installed using:
 ~~~
