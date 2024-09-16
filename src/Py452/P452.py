@@ -21,7 +21,7 @@ def bt_loss(f, p, d, h, g, zone, htg, hrg, phit_e, phit_n, phir_e, phir_n, Gt, G
     Lb = P452.bt_loss(f, p, d, h, g, zone, htg, hrg, phit_e, phit_n, phir_e, phir_n, Gt, Gr, pol, dct, dcr, press, temp)
 
     This is the MAIN function that computes the basic transmission loss not exceeded for p percentage of time
-    as defined in ITU-R P.452-17 (Section 4.6).
+    as defined in ITU-R P.452-18.
 
     Input parameters:
     f       -   Frequency (GHz)
@@ -83,12 +83,12 @@ def bt_loss(f, p, d, h, g, zone, htg, hrg, phit_e, phit_n, phir_e, phir_n, Gt, G
     # gi is the terrain height in metres above sea level for all the points at a distance from transmitter or receiver less than 50 m.
 
     (kk, ) = np.where(d < 50/1000)
-    if (~isempty(kk)):
+    if (not isempty(kk)):
         g[kk] = h[kk]
         
     endVal = d[-1] - 50.0/1000.0;
     (kk,  ) = np.where(d > endVal)
-    if (~isempty(kk)):
+    if (not isempty(kk)):
         g[kk] = h[kk]
 
     # Compute the path profile parameters
