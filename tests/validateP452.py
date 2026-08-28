@@ -30,8 +30,9 @@ test_results = "./validation_examples/results/"
 # Collect all the filenames .csv in the folder test_profiles that contain the profile data
 try:
     filenames = [f for f in os.listdir(test_profiles) if f.endswith(".csv")]
-except:
+except FileNotFoundError:
     print("The system cannot find the given folder " + test_profiles)
+    filenames = []
 
 print("\n")
 
