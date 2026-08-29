@@ -23,7 +23,7 @@ from Py452 import P452
 | File/Folder               | Description                                                         |
 |----------------------------|---------------------------------------------------------------------|
 |`/src/Py452/P452.py`                | python implementation of Recommendation ITU-R P.452-18         |
-|`initiate_digital_maps.py`| python script that processes the ITU-R maps and generates the necessary `.npz` file. It needs to be run prior to using this software implementation. For details, see [Integrating ITU Digital Products](#integrating-itu-digital-products). |
+|`/src/Py452/initiate_digital_maps.py`| python script that processes the ITU-R maps and generates the necessary `.npz` file. It needs to be run prior to using this software implementation. For details, see [Integrating ITU Digital Products](#integrating-itu-digital-products). |
 |`/tests/validateP452.py`          | python script used to validate the implementation of Recommendation ITU-R P.452-18 in `P452.bt_loss()`             |
 |`/tests/validation_examples/profiles/`    | Folder containing a proposed set of terrain profiles for validation of python implementation (or any other software implementation) of this Recommendation |
 |`/tests/validation_examples/results/`	   | Folder containing a proposed set of input parameters and the intermediate and final results for the set of terrain profiles defined in the folder `./validation_profiles/` |

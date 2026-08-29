@@ -1328,7 +1328,6 @@ def dl_se_ft(d, hte, hre, adft, f, omega):
     Ldft = omega * Ldft_sea + (1 - omega) * Ldft_land  # Eq (29)
 
     return Ldft
-    end
 
 
 def dl_se(d, hte, hre, ap, f, omega):
@@ -1464,7 +1463,7 @@ def dl_p(d, h, hts, hrs, hstd, hsrd, f, omega, p, b0, DN):
     Ld50 = dl_delta_bull(d, h, hts, hrs, hstd, hsrd, ap, f, omega)
 
     if p == 50:
-        Ldp = Ld50
+        Ldp = Ld50.copy()
         return Ldp, Ld50
 
     if p < 50:
@@ -1711,7 +1710,7 @@ def closs_corr(f, d, h, zone, htg, hrg, ha_t, ha_r, dk_t, dk_r):
 
         (kk,) = np.where(d >= dk)
 
-        if ~isempty(kk):
+        if not isempty(kk):
             index1 = kk[0]
         else:
             index1 = len(d)
@@ -1729,7 +1728,7 @@ def closs_corr(f, d, h, zone, htg, hrg, ha_t, ha_r, dk_t, dk_r):
         flagAhr = 1
 
         (kk,) = np.where(d <= d[-1] - dk)
-        if ~isempty(kk):
+        if not isempty(kk):
             index2 = kk[-1]
         else:
             index2 = 0
@@ -1787,12 +1786,6 @@ def beta0(phi, dtm, dlm):
 
     return b0
 
-
-def isempty(x):
-    if np.size(x) == 0:
-        return True
-    else:
-        return False
 
 def interp2(matrix_map, lon, lat, lon_spacing, lat_spacing):
     """
